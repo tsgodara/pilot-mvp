@@ -1,0 +1,36 @@
+{
+  "name": "banking-productivity",
+  "version": "1.0.0",
+  "description": "dialogflow bank Bot allows customer to open an account, check balance, etc.",
+  "main": "server.js",
+  "dependencies": {
+    "apiai": "^4.0.3",
+    "body-parser": "^1.18.2",
+    "debug": "^3.1.0",
+    "errorhandler": "^1.5.0",
+    "express": "^4.16.3",
+    "express-unless": "^0.5.0",
+    "http": "^0.0.0",
+    "moment": "^2.21.0",
+    "node-redis-multi": "^0.1.2",
+    "node-stringify": "^0.2.1",
+    "randomatic": "^3.0.0",
+    "redis": "^2.8.0",
+    "request": "^2.85.0",
+    "underscore": "^1.8.3",
+    "url": "^0.11.0",
+    "urlencode": "^1.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bank",
+    "pwa",
+    "bot",
+    "account"
+  ],
+  "author": "Tapendra S Godara",
+  "license": "ISC"
+}

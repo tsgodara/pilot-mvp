@@ -18,10 +18,11 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         res.json({ Message: "Customer OnBoarding Portal is connected!!" });
     });
 
-    router.post("/customerOnboard", function(req, res) {
+    router.post("/customer", function(req, res) {
         var aadhar = req.body.aadhar;
         var KYC = req.body.kyc;
-        var partnerKey = config.partner_field + ":" + req.body.partner_id + ":" + config.product_field + ":" + req.body.product_id;
+        var partnerId = req.body.partner_id;
+        var productId = req.body.product_id;
         redisClient.hget(config.table, config.customerAadhar_field + ":" + req.body.aadhar, function(err, reply) {
             if (err) {
                 res.status(500).json({ error: "error registring new customer!!" });
@@ -34,44 +35,56 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                         if (error) {
                             res.status(500).json({ error: "error registring new customer!!" });
                         } else {
-                            updateKYC(req, res, partnerKey, result[1], KYC);
+                            updateKYC(req, res, partnerId, productId, result[1], KYC, false);
                         }
                     });
             } else {
-                updateKYC(req, res, partnerKey, reply, KYC);
+                updateKYC(req, res, partnerId, productId, reply, KYC, true);
             }
         });
     });
 
-    function updateKYC(req, res, partnerKey, customerID, KYC) {
+    function updateKYC(req, res, partnerId, productId, customerId, KYC, existingCustomer) {
+        var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
         multi
-            .hset(config.table, config.customerID_field + ":" + customerID, KYC)
-            .hset(config.table, config.customerID_field + ":" + customerID + ":" + partnerKey, KYC)
+            .hset(config.table, config.customerID_field + ":" + customerId, KYC)
+            .hset(config.table, config.customerID_field + ":" + customerId + ":" + partnerKey, KYC)
+            .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
             .exec(function(error, response) {
                 if (error) {
                     res.status(500).json({ error: "error registring new customer!!" });
                 } else {
-                    res.json({ customer_id: customerID });
+                    var balanceObj = ((response[2] == null) ? "" : JSON.parse(response[2]));
+                    res.json({
+                        "partner_id": partnerId,
+                        "product_id": productId,
+                        "customer_id": customerId,
+                        "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                    });
                 }
 
             });
     }
 
 
-    router.post("/updateLimit", function(req, res) {
-        var aadhar = req.body.aadhar;
+    router.post("/limit", function(req, res) {
+        var customerId = req.body.customer_id;
         var KYC = req.body.kyc;
         var limit = (req.body.kyc == 0) ? 10000 : 100000;
-        redisClient.hget(config.table, config.customerAadhar_field + ":" + req.body.aadhar, function(err, reply) {
-            if (reply) {
+        redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
+            if (reply == "1") {
                 multi
-                    .hset(config.table, config.customerID_field + ":" + reply + ":" + config.customerLimit_field, limit)
-                    .hset(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field, 0)
+                    .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
+                    .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
                     .exec(function(error, result) {
                         if (error) {
                             res.status(500).json({ error: "error updating limit!! " });
                         } else {
-                            res.json({ success: true });
+                            var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                            res.json({
+                                "customer_id": customerId,
+                                "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                            });
                         }
                     });
             } else {
@@ -81,55 +94,96 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     });
 
 
-    router.post("/checkCustomerExists", function(req, res) {
-        var aadhar = req.body.aadhar;
-        redisClient.hget(config.table, config.customerAadhar_field + ":" + req.body.aadhar, function(err, reply) {
-            if (reply) {
-                res.json({ customer_id: reply });
+    router.get("/customer/:customer_id", function(req, res) {
+        var customerId = req.params.customer_id;
+        multi
+        .hget(config.table, config.customerID_field + ":" + customerId)
+        .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
+        .exec(function(error, result) {
+            if (!error) {
+                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                res.json({
+                    "customer_id": customerId,
+                    "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                });
             } else {
                 res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
             }
         });
     });
 
-    router.post("/doTransaction/:type", function(req, res) {
+    router.post("/transaction/:type", function(req, res) {
         var type = req.params.type;
-        var aadhar = req.body.aadhar;
+        var customerId = req.body.customer_id;
+        var transactionId = req.body.transaction_id;
+        var partnerId = req.body.partner_id;
+        var productId = req.body.product_id;
         var amount = req.body.amount;
-        redisClient.hget(config.table, config.customerAadhar_field + ":" + req.body.aadhar, function(err, reply) {
-          if (reply) {
-            var customerId = reply;
+        redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
+            if (reply == "1") {
                 multi
-                    .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerLimit_field)
-                    .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field)
+                    .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field)
+                    .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
                     .exec(function(error, result) {
                         var currentBalance;
                         if (error) {
                             res.status(500).json({ error: "error while performing transaction!! " });
                         } else {
                             if (type == "credit") {
-                                if ((result[0]==null) || (parseInt(result[1]) + parseInt(amount)) > parseInt(result[0])) {
+                                if ((result[0] == null) || (parseInt(result[1]) + parseInt(amount)) > parseInt(result[0])) {
                                     res.status(304).json({ error: "limit can not be updated!! " });
                                 } else {
-                                    currentBalance = parseInt(result[1]) + parseInt(amount);
-                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, currentBalance, function(err, response) {
+                                    var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                                    currentBalance = ((balanceObj == "") ? 0 : balanceObj.balance) + parseInt(amount);
+                                    var transObj = JSON.stringify({
+                                        partner_id: partnerId,
+                                        product_id: productId,
+                                        transaction_id: transactionId,
+                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
+                                        balance: currentBalance,
+                                        transaction_amount: amount,
+                                        time: new Date().getTime(),
+                                        type: type
+                                    });
+                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
                                         if (!err) {
-                                            updateTransactionLog(req, res, customerId, currentBalance, parseInt(amount), type)
+                                            updateTransactionLog(req, res, customerId, transObj)
                                         } else {
-                                            res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
+                                            res.status(400);
+                                            res.json({
+                                                status: "failed",
+                                                customer_id: customerId,
+                                                balance: (result[1] == null) ? 0 : result[1]
+                                            });
                                         }
                                     });
                                 }
                             } else if (type == "debit") {
-                                if ((result[0]==null) || (parseInt(amount) > parseInt(result[1]))) {
+                                if ((result[0] == null) || (parseInt(amount) > parseInt(result[1]))) {
                                     res.status(304).json({ error: "Not enough amount to perform transaction!! " });
                                 } else {
-                                    currentBalance = parseInt(result[1]) - parseInt(amount);
-                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, currentBalance, function(err, response) {
+                                    var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                                    currentBalance = ((balanceObj == "") ? 0 : balanceObj.balance) - parseInt(amount);
+                                    var transObj = JSON.stringify({
+                                        partner_id: partnerId,
+                                        product_id: productId,
+                                        transaction_id: transactionId,
+                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
+                                        balance: currentBalance,
+                                        transaction_amount: amount,
+                                        time: new Date().getTime(),
+                                        type: type
+                                    });
+                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
                                         if (!err) {
-                                          updateTransactionLog(req, res, customerId, currentBalance, parseInt(amount), type)
+                                            updateTransactionLog(req, res, customerId, transObj)
                                         } else {
-                                            res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
+                                            res.status(400);
+                                            res.json({
+                                                status: "failed",
+                                                customer_id: customerId,
+                                                balance: (result[1] == null) ? 0 : result[1]
+                                            });
                                         }
                                     });
                                 }
@@ -142,24 +196,31 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         });
     });
 
-    function updateTransactionLog(req, res, customerId, currentBalance, amount, type) {
+    function updateTransactionLog(req, res, customerId, transObj) {
         var currentTimestamp = new Date().getTime();
-        var date = moment(currentTimestamp).format("DD-MMM-YYYY");
-        var time = moment(currentTimestamp).format("hh:mm:ss A");
-        redisClient.zadd(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, currentTimestamp, "rupees "+amount+" "+ type+"ed on "+date+" at "+time, function(err, reply) {
+        redisClient.zadd(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, currentTimestamp, transObj, function(err, reply) {
             if (!err) {
-                res.json({ transaction_id: "", available_Balance: currentBalance });
+                res.json({
+                    status: "success",
+                    customer_id: customerId,
+                    balance: JSON.parse(transObj).balance
+                });
             } else {
-                res.status(500).json({ error: "error while updating transaction log!!" });
+                res.json({
+                    status: "success",
+                    customer_id: customerId,
+                    balance: JSON.parse(transObj).balance,
+                    error: "error while updating transaction log!!"
+                });
             }
         });
     }
 
-    router.post("/getTransactions", function(req, res) {
-        var customerId = req.body.customer_id;
+    router.get("/transactions/:customer_id", function (req, res) {
+        var customerId = req.params.customer_id;
         redisClient.zrevrange(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, 0, -1, function(err, result) {
             if (result) {
-                res.json({ transactions: result });
+                res.json({ transactions: result.map(JSON.parse) });
             } else {
                 res.status(500).json({ error: "error in fetching transactions!!" });
             }

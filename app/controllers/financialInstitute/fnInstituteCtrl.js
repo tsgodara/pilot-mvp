@@ -6,6 +6,7 @@ var unAuthorizedAccessError = require("../../errors/unAuthorizedAccessError.js")
 var notFoundError = require("../../errors/notFoundError.js");
 var utils = require("../../utils/utils.js");
 
+
 function REST_ROUTER(router, redisClient) {
     var self = this;
     self.handleRoutes(router, redisClient);
@@ -16,6 +17,42 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     var self = this;
     router.get("/", function(req, res) {
         res.json({ Message: "Customer OnBoarding Portal is connected!!" });
+    });
+
+    router.post("/login", function (req, res) {
+        var key = config.username_field + ":" + req.body.username + ":" + config.password_field + ":" + req.body.password;
+        redisClient.hget(config.table, key, function(error, result) {
+            if (!error && result!==null) {
+                var jsonObj = JSON.parse(result);
+                res.json({
+                    "full_name": jsonObj.full_name,
+                    "aadhar": jsonObj.aadhar,
+                    "gender": jsonObj.gender 
+                });
+            } else {
+                res.status(500).json({ error: "login failed!!" });
+            }
+        });
+    });
+
+    router.post("/register", function (req, res) {
+        var key = config.username_field + ":" + req.body.username + ":" + config.password_field + ":" + req.body.password;
+        var userDetails = JSON.stringify({
+            "full_name": req.body.full_name,
+            "aadhar": req.body.aadhar,
+            "gender": "Male"            
+        })
+        redisClient.hset(config.table, key, userDetails, function(error, result) {
+            if (!error) {
+                res.json({
+                    "full_name": req.body.full_name,
+                    "aadhar": req.body.aadhar,
+                    "gender": "Male" 
+                });
+            } else {
+                res.status(500).json({ error: "signup failed!!" });
+            }
+        });
     });
 
     router.post("/customer", function(req, res) {
@@ -59,7 +96,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                         "partner_id": partnerId,
                         "product_id": productId,
                         "customer_id": customerId,
-                        "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                        "balance": (balanceObj == "") ? 0 : balanceObj.balance,
+                        "kyc":KYC
                     });
                 }
 
@@ -83,7 +121,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                             var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                             res.json({
                                 "customer_id": customerId,
-                                "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                                "balance": (balanceObj == "") ? 0 : balanceObj.balance,
+                                "limit":limit
                             });
                         }
                     });
@@ -115,7 +154,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     router.post("/transaction/:type", function(req, res) {
         var type = req.params.type;
         var customerId = req.body.customer_id;
-        var transactionId = req.body.transaction_id;
+        // var transactionId = req.body.transaction_id;
+        var transactionId = randomString('0', 7);
         var partnerId = req.body.partner_id;
         var productId = req.body.product_id;
         var amount = req.body.amount;

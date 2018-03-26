@@ -2,6 +2,8 @@
   "env": "dev",
   "port_number": 3000,
   "table": "CUSTOMERS",
+  "username_field":"USERNAME",
+  "password_field":"PASSWORD",
   "customerID_field": "CUST_ID",
   "customerAadhar_field": "ADHR",
   "customerKyc_field": "KYC",

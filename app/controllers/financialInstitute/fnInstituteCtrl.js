@@ -154,8 +154,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     router.post("/transaction/:type", function(req, res) {
         var type = req.params.type;
         var customerId = req.body.customer_id;
-        // var transactionId = req.body.transaction_id;
-        var transactionId = randomString('0', 7);
+        var transactionId = req.body.transaction_id;
+        // var transactionId = randomString('0', 7);
         var partnerId = req.body.partner_id;
         var productId = req.body.product_id;
         var amount = req.body.amount;

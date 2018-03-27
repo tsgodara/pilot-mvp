@@ -170,11 +170,12 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                             res.status(500).json({ error: "error while performing transaction!! " });
                         } else {
                             if (type == "credit") {
-                                if ((result[0] == null) || (parseInt(result[1]) + parseInt(amount)) > parseInt(result[0])) {
+                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
+                                if ((result[0] == null) || (parseInt(balance) + parseInt(amount)) > parseInt(result[0])) {
                                     res.status(304).json({ error: "limit can not be updated!! " });
                                 } else {
-                                    var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
-                                    currentBalance = ((balanceObj == "") ? 0 : balanceObj.balance) + parseInt(amount);
+                                    currentBalance = parseInt(balance) + parseInt(amount);
                                     var transObj = JSON.stringify({
                                         partner_id: partnerId,
                                         product_id: productId,
@@ -199,11 +200,12 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                     });
                                 }
                             } else if (type == "debit") {
-                                if ((result[0] == null) || (parseInt(amount) > parseInt(result[1]))) {
+                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
+                                if ((result[0] == null) || (parseInt(amount) > parseInt(balance))) {
                                     res.status(304).json({ error: "Not enough amount to perform transaction!! " });
                                 } else {
-                                    var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
-                                    currentBalance = ((balanceObj == "") ? 0 : balanceObj.balance) - parseInt(amount);
+                                    currentBalance = parseInt(balance) - parseInt(amount);
                                     var transObj = JSON.stringify({
                                         partner_id: partnerId,
                                         product_id: productId,

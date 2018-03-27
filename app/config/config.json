@@ -6,6 +6,7 @@
   "password_field":"PASSWORD",
   "customerID_field": "CUST_ID",
   "customerAadhar_field": "ADHR",
+  "customerMobile_field": "MOBILE_NUMBER",
   "customerKyc_field": "KYC",
   "customerLimit_field": "LIMIT",
   "customerBalance_field":"BAL",

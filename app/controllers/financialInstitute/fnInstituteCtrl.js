@@ -26,7 +26,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                 var jsonObj = JSON.parse(result);
                 res.json({
                     "full_name": jsonObj.full_name,
-                    "aadhaar": jsonObj.aadhaar,
+                    "mobile": req.body.mobile_number,
                     "gender": jsonObj.gender 
                 });
             } else {
@@ -39,14 +39,14 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         var key = config.username_field + ":" + req.body.username + ":" + config.password_field + ":" + req.body.password;
         var userDetails = JSON.stringify({
             "full_name": req.body.full_name,
-            "aadhaar": req.body.aadhaar,
+            "mobile": req.body.mobile_number,
             "gender": "Male"            
         })
         redisClient.hset(config.table, key, userDetails, function(error, result) {
             if (!error) {
                 res.json({
                     "full_name": req.body.full_name,
-                    "aadhaar": req.body.aadhaar,
+                    "mobile": req.body.mobile_number,
                     "gender": "Male" 
                 });
             } else {
@@ -56,47 +56,60 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     });
 
     router.post("/customer", function(req, res) {
-        var aadhaar = req.body.aadhaar;
+        var mobile = req.body.mobile_number;
         var KYC = req.body.kyc;
         var partnerId = req.body.partner_id;
         var productId = req.body.product_id;
-        redisClient.hget(config.table, config.customerAadhar_field + ":" + aadhaar, function(err, reply) {
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function(err, reply) {
             if (err) {
                 res.status(500).json({ msg: "error registring new customer!!", error: err });
-            } else if (!reply) {
+            } else if (reply==null) {
                 var randomCustomerId = randomString('A0', 8);
                 multi
-                    .hset(config.table, config.customerAadhar_field + ":" + aadhaar, randomCustomerId)
-                    .hget(config.table, config.customerAadhar_field + ":" + aadhaar)
+                    .hset(config.table, config.customerMobile_field + ":" + mobile, randomCustomerId)
+                    .hget(config.table, config.customerMobile_field + ":" + mobile)
                     .exec(function(error, result) {
                         if (error) {
                             res.status(500).json({ error: "error registring new customer!!" });
                         } else {
-                            updateKYC(req, res, partnerId, productId, result[1], KYC, false);
+                            updateUserDetails(req, res, partnerId, productId, result[1], KYC, false);
                         }
                     });
             } else {
-                updateKYC(req, res, partnerId, productId, reply, KYC, true);
+                updateUserDetails(req, res, partnerId, productId, reply, KYC, true);
             }
         });
     });
 
-    function updateKYC(req, res, partnerId, productId, customerId, KYC, existingCustomer) {
+    function updateUserDetails(req, res, partnerId, productId, customerId, KYC, existingCustomer) {
         var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
+        var limit = (KYC == '0' ||KYC == 0) ? 10000 : 100000;
         multi
             .hset(config.table, config.customerID_field + ":" + customerId, KYC)
             .hset(config.table, config.customerID_field + ":" + customerId + ":" + partnerKey, KYC)
+            .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
             .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
             .exec(function(error, response) {
                 if (error) {
-                    res.status(500).json({ error: "error registring new customer!!" });
+                    res.status(500).json({
+                        "error": "Failed updating user details: KYC, Limit",
+                        "partner_id": partnerId,
+                        "product_id": productId,
+                        "customer_id": customerId
+                        
+                    });
                 } else {
-                    var balanceObj = ((response[2] == null) ? "" : JSON.parse(response[2]));
+                    var balanceObj = ((response[3] == null) ? "" : JSON.parse(response[3]));
                     res.json({
                         "partner_id": partnerId,
                         "product_id": productId,
                         "customer_id": customerId,
                         "balance": (balanceObj == "") ? 0 : balanceObj.balance,
+                        "limit": limit,
                         "kyc":KYC
                     });
                 }
@@ -105,22 +118,27 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     }
 
 
-    router.post("/limit", function(req, res) {
-        var customerId = req.body.customer_id;
+    router.post("/limit", function (req, res) {
+        
         var KYC = req.body.kyc;
         var limit = (req.body.kyc == 0) ? 10000 : 100000;
-        redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
-            if (reply != null) {
+        var mobile = req.body.mobile_number;
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function (err, reply) {
+            if (reply) {
                 multi
-                    .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
-                    .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
+                    .hset(config.table, config.customerID_field + ":" + reply + ":" + config.customerLimit_field, limit)
+                    .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field)
                     .exec(function(error, result) {
                         if (error) {
                             res.status(500).json({ error: "error updating limit!! " });
                         } else {
                             var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                             res.json({
-                                "customer_id": customerId,
+                                "customer_id": reply,
                                 "balance": (balanceObj == "") ? 0 : balanceObj.balance,
                                 "limit":limit
                             });
@@ -133,36 +151,51 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     });
 
 
-    router.get("/customer/:customer_id", function(req, res) {
-        var customerId = req.params.customer_id;
-        multi
-        .hget(config.table, config.customerID_field + ":" + customerId)
-        .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
-        .exec(function(error, result) {
-            if (!error) {
-                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
-                res.json({
-                    "customer_id": customerId,
-                    "balance": (balanceObj == "") ? 0 : balanceObj.balance
-                });
+    router.get("/customer/:mobile_number", function(req, res) {
+        var mobile = req.params.mobile_number;
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function (err, reply) { 
+            if (reply) {
+                multi
+                    .hget(config.table, config.customerID_field + ":" + reply)
+                    .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field)
+                    .exec(function (error, result) {
+                        if (!error) {
+                            var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                            res.json({
+                                "customer_id": reply,
+                                "balance": (balanceObj == "") ? 0 : balanceObj.balance
+                            });
+                        } else {
+                            res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
+                        }
+                    });
             } else {
-                res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
-            }
-        });
+                res.status(500).json({ error: "customer is not registered at financial intitutions!!" }); 
+            }    
+        })
     });
 
     router.post("/transaction/:type", function(req, res) {
         var type = req.params.type;
-        var customerId = req.body.customer_id;
+        var mobile = req.body.mobile_number;
         var transactionId = req.body.transaction_id;
         // var transactionId = randomString('0', 7);
         var partnerId = req.body.partner_id;
         var productId = req.body.product_id;
         var amount = req.body.amount;
-        redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
-            if (reply !=null) {
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function(err, reply) {
+            if (reply != null) {
+                var customerId = reply;
                 multi
-                    .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field)
+                    .hget(config.table, config.customerID_field + ":" +   customerId   + ":" + config.customerLimit_field)
                     .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
                     .exec(function(error, result) {
                         var currentBalance;
@@ -173,7 +206,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                 var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                                 var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
                                 if ((result[0] == null) || (parseInt(balance) + parseInt(amount)) > parseInt(result[0])) {
-                                    res.status(304).json({ error: "limit can not be updated!! " });
+                                    res.status(400).json({ error: "limit can not be updated!! " });
                                 } else {
                                     currentBalance = parseInt(balance) + parseInt(amount);
                                     var transObj = JSON.stringify({
@@ -203,7 +236,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                 var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                                 var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
                                 if ((result[0] == null) || (parseInt(amount) > parseInt(balance))) {
-                                    res.status(304).json({ error: "Not enough amount to perform transaction!! " });
+                                    res.status(400).json({ error: "Not enough amount to perform transaction!! " });
                                 } else {
                                     currentBalance = parseInt(balance) - parseInt(amount);
                                     var transObj = JSON.stringify({
@@ -258,15 +291,25 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         });
     }
 
-    router.get("/transactions/:customer_id", function (req, res) {
-        var customerId = req.params.customer_id;
-        redisClient.zrevrange(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, 0, -1, function(err, result) {
-            if (result) {
-                res.json({ transactions: result.map(JSON.parse) });
+    router.get("/transactions/:mobile_number", function (req, res) {
+        var mobile = req.params.mobile_number;
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function (err, reply) {
+            if (reply) {
+                redisClient.zrevrange(config.customerID_field + ":" + reply + ":" + config.customerTransaction_field, 0, -1, function (err, result) {
+                    if (result) {
+                        res.json({ transactions: result.map(JSON.parse) });
+                    } else {
+                        res.status(500).json({ error: "error in fetching transactions!!" });
+                    }
+                });
             } else {
-                res.status(500).json({ error: "error in fetching transactions!!" });
-            }
-        });
+                res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
+            } 
+         })
     });
 
 

@@ -110,7 +110,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         var KYC = req.body.kyc;
         var limit = (req.body.kyc == 0) ? 10000 : 100000;
         redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
-            if (reply == "1") {
+            if (reply != null) {
                 multi
                     .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
                     .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)

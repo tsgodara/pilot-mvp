@@ -191,7 +191,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         } else {
                                             res.status(400);
                                             res.json({
-                                                status: "failed",
+                                                status: "FAILURE",
                                                 customer_id: customerId,
                                                 balance: (result[1] == null) ? 0 : result[1]
                                             });
@@ -220,7 +220,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         } else {
                                             res.status(400);
                                             res.json({
-                                                status: "failed",
+                                                status: "FAILURE",
                                                 customer_id: customerId,
                                                 balance: (result[1] == null) ? 0 : result[1]
                                             });
@@ -241,13 +241,13 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         redisClient.zadd(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, currentTimestamp, transObj, function(err, reply) {
             if (!err) {
                 res.json({
-                    status: "success",
+                    status: "SUCCESS",
                     customer_id: customerId,
                     balance: JSON.parse(transObj).balance
                 });
             } else {
                 res.json({
-                    status: "success",
+                    status: "SUCCESS",
                     customer_id: customerId,
                     balance: JSON.parse(transObj).balance,
                     error: "error while updating transaction log!!"

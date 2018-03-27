@@ -62,7 +62,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         var productId = req.body.product_id;
         redisClient.hget(config.table, config.customerAadhar_field + ":" + req.body.aadhar, function(err, reply) {
             if (err) {
-                res.status(500).json({ error: "error registring new customer!!" });
+                res.status(500).json({ msg: "error registring new customer!!", error: err });
             } else if (!reply) {
                 var randomCustomerId = randomString('A0', 8);
                 multi

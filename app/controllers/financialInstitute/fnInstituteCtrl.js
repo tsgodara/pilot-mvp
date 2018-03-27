@@ -160,7 +160,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         var productId = req.body.product_id;
         var amount = req.body.amount;
         redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, reply) {
-            if (reply == "1") {
+            if (reply !=null) {
                 multi
                     .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field)
                     .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)

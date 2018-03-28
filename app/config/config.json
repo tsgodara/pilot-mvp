@@ -10,7 +10,7 @@
   "customerKyc_field": "KYC",
   "customerLimit_field": "LIMIT",
   "customerBalance_field":"BAL",
-  "customerTransaction_field":"transaction",
+  "customerTransaction_field":"TRANSACTION",
   "partner_field": "PART",
   "product_field":"PROD",
   "partnerKyc_field": "KYC",

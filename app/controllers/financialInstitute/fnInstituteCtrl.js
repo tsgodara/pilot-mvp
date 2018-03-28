@@ -90,7 +90,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         var limit = (KYC == '0' ||KYC == 0) ? 10000 : 100000;
         multi
             .hset(config.table, config.customerID_field + ":" + customerId, KYC)
-            .hset(config.table, config.customerID_field + ":" + customerId + ":" + partnerKey, KYC)
+            .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)
             .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
             .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
             .exec(function(error, response) {

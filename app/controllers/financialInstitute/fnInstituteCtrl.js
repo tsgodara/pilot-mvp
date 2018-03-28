@@ -312,6 +312,31 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
          })
     });
 
+    router.get("/balance/:mobile_number", function (req, res) {
+        var mobile = req.params.mobile_number;
+        if (mobile == undefined || mobile == 'undefined') {
+            res.status(400).json({ error: "Invalid payload data!!" });
+            return
+        }
+        redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function (err, reply) {
+            if (reply) {
+                redisClient.hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field, function (err, result) {
+                    if (result) {
+                        var balanceObj = ((result == null) ? "" : JSON.parse(result));
+                        res.json({
+                            balance: ((balanceObj == "") ? 0 : balanceObj.balance)
+                        });
+
+                    } else {
+                        res.status(500).json({ error: "error in fetching balance!!" });
+                    }
+                });
+            } else {
+                res.status(500).json({ error: "customer is not registered at financial intitutions!!" });
+            } 
+         })
+    });
+
 
 };
 

@@ -26,6 +26,7 @@
   "transaction_error": "Error while performing transaction!! ",
   "transaction_fetch_error": "Failed to fetch transactions!!",
   "fetch_balance_error":"Failed to fetch balance!!",
+  "part_prod_unregistered":"Customer not mapped to partner or product requested.",
   "error_update_limit":"Error updating limit!!",
   "customer_update_error":"Failed to update customer details: KYC, Limit, etc.",
   "customer_registration_error":"Failed to register new customer!!",

@@ -182,87 +182,106 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function(err, reply) {
             if (reply != null) {
                 var customerId = reply;
+              var prod_part_key = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
                 multi
                     .hget(config.table, config.customerID_field + ":" +   customerId   + ":" + config.customerLimit_field)
                     .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
+                    .hget(prod_part_key, config.customerID_field + ":" + customerId)
                     .exec(function(error, result) {
                         var currentBalance;
                         if (error) {
                             res.status(500).json({ error: config.transaction_error});
                         } else {
-                            if (type == "credit") {
-                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
-                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
-                                if ((result[0] == null) || (parseInt(balance) + parseInt(amount)) > parseInt(result[0])) {
-                                    res.status(400).json({
-                                        msg: config.exceed_limit,
-                                        balance: balance,
-                                        status: config.error_msg
-                                    });
-                                } else {
-                                    currentBalance = parseInt(balance) + parseInt(amount);
-                                    var transObj = JSON.stringify({
-                                        partner_id: partnerId,
-                                        product_id: productId,
-                                        transaction_id: transactionId,
-                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
-                                        balance: currentBalance,
-                                        transaction_amount: amount,
-                                        time: new Date().getTime(),
-                                        type: type,
-                                        audit_status: "APPROVED"
-                                    });
-                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
-                                        if (!err) {
-                                            updateTransactionLog(req, res, customerId, transObj, type, currentBalance)
-                                        } else {
-                                            res.status(400);
-                                            res.json({
-                                                status: config.failure_msg,
-                                                customer_id: customerId,
-                                                balance: (result[1] == null) ? 0 : result[1]
-                                            });
-                                        }
-                                    });
-                                }
-                            } else if (type == "debit") {
-                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
-                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
-                                if ((result[0] == null) || (parseInt(amount) > parseInt(balance))) {
-                                    res.status(400).json(
-                                        {
-                                            msg: config.not_enough_amount,
-                                            balance: balance,
-                                            status: config.error_msg
-                                        }
-                                    );
-                                } else {
-                                    currentBalance = parseInt(balance) - parseInt(amount);
-                                    var transObj = JSON.stringify({
-                                        partner_id: partnerId,
-                                        product_id: productId,
-                                        transaction_id: transactionId,
-                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
-                                        balance: currentBalance,
-                                        transaction_amount: amount,
-                                        time: new Date().getTime(),
-                                        type: type,
-                                        audit_status: "APPROVED"
-                                    });
-                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
-                                        if (!err) {
-                                            updateTransactionLog(req, res, customerId, transObj, type, currentBalance)
-                                        } else {
-                                            res.status(400);
-                                            res.json({
-                                                status: config.failure_msg,
-                                                customer_id: customerId,
-                                                balance: (result[1] == null) ? 0 : result[1]
-                                            });
-                                        }
-                                    });
-                                }
-                            }
+                        	
+                        		if (result[2] == null)
+                        		{
+                        			var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+                              var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
+                        			res.status(400).json
+                        			(
+                        				{
+                        					msg: config.part_prod_unregistered,
+                        					balance: balance,
+                        					status: config.error_msg
+                        				}
+                        			);
+                        		}
+                        		else
+                        		{
+	                            if (type == "credit") {
+	                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+	                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
+	                                if ((result[0] == null) || (parseInt(balance) + parseInt(amount)) > parseInt(result[0])) {
+	                                    res.status(400).json({
+	                                        msg: config.exceed_limit,
+	                                        balance: balance,
+	                                        status: config.error_msg
+	                                    });
+	                                } else {
+	                                    currentBalance = parseInt(balance) + parseInt(amount);
+	                                    var transObj = JSON.stringify({
+	                                        partner_id: partnerId,
+	                                        product_id: productId,
+	                                        transaction_id: transactionId,
+	                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
+	                                        balance: currentBalance,
+	                                        transaction_amount: amount,
+	                                        time: new Date().getTime(),
+	                                        type: type,
+	                                        audit_status: "APPROVED"
+	                                    });
+	                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
+	                                        if (!err) {
+	                                            updateTransactionLog(req, res, customerId, transObj, type, currentBalance)
+	                                        } else {
+	                                            res.status(400);
+	                                            res.json({
+	                                                status: config.failure_msg,
+	                                                customer_id: customerId,
+	                                                balance: (result[1] == null) ? 0 : result[1]
+	                                            });
+	                                        }
+	                                    });
+	                                }
+	                            } else if (type == "debit") {
+	                                var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
+	                                var balance = ((balanceObj == "") ? 0 : balanceObj.balance);
+	                                if ((result[0] == null) || (parseInt(amount) > parseInt(balance))) {
+	                                    res.status(400).json(
+	                                        {
+	                                            msg: config.not_enough_amount,
+	                                            balance: balance,
+	                                            status: config.error_msg
+	                                        }
+	                                    );
+	                                } else {
+	                                    currentBalance = parseInt(balance) - parseInt(amount);
+	                                    var transObj = JSON.stringify({
+	                                        partner_id: partnerId,
+	                                        product_id: productId,
+	                                        transaction_id: transactionId,
+	                                        prev_balance: (balanceObj == "") ? 0 : balanceObj.balance,
+	                                        balance: currentBalance,
+	                                        transaction_amount: amount,
+	                                        time: new Date().getTime(),
+	                                        type: type,
+	                                        audit_status: "APPROVED"
+	                                    });
+	                                    redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
+	                                        if (!err) {
+	                                            updateTransactionLog(req, res, customerId, transObj, type, currentBalance)
+	                                        } else {
+	                                            res.status(400);
+	                                            res.json({
+	                                                status: config.failure_msg,
+	                                                customer_id: customerId,
+	                                                balance: (result[1] == null) ? 0 : result[1]
+	                                            });
+	                                        }
+	                                    });
+	                                }
+	                            }
+                          	}
                         }
                     });
             } else {

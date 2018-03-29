@@ -209,7 +209,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         balance: currentBalance,
                                         transaction_amount: amount,
                                         time: new Date().getTime(),
-                                        type: type
+                                        type: type,
+                                        audit_status: "Authorized"
                                     });
                                     redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
                                         if (!err) {
@@ -245,7 +246,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         balance: currentBalance,
                                         transaction_amount: amount,
                                         time: new Date().getTime(),
-                                        type: type
+                                        type: type,
+                                        audit_status: "Authorized"
                                     });
                                     redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transObj, function(err, response) {
                                         if (!err) {

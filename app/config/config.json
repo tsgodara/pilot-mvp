@@ -16,6 +16,8 @@
   "partner_field": "PART",
   "product_field":"PROD",
   "partnerKyc_field": "KYC",
+  "transaction_table":"TRANSACTIONS",
+  "transaction_field":"trans_log",
   "error_msg": "ERROR",
   "success_msg":"SUCCESS",
   "failure_msg":"FAILURE",

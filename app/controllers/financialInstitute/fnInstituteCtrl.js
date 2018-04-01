@@ -181,8 +181,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         requestSt.Transaction.ProprietaryBankTransactionCode.Code = req.body.Data.Transaction.ProprietaryBankTransactionCode.Code;
         requestSt.Transaction.ProprietaryBankTransactionCode.Issuer = req.body.Data.Transaction.ProprietaryBankTransactionCode.Issuer;
         requestSt.Transaction.Meta = {
-            partner:partnerId,
-            product:productId
+            partner: partnerId,
+            product: productId
         };
 
 
@@ -273,30 +273,33 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
 
     function updateTransactionLog(req, res, customerId, transObj, type, currentBalance, errorTrans, msg, errorMsg) {
         var currentTimestamp = new Date().getTime();
-        redisClient.zadd(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, currentTimestamp, transObj, function(err, reply) {
-            if (!err) {
-                if (errorTrans) {
-                    res.json({
-                        msg: msg,
-                        balance: currentBalance,
-                        status: errorMsg
-                    });
+        multi
+            .zadd(config.customerID_field + ":" + customerId + ":" + config.customerTransaction_field, currentTimestamp, transObj)
+            .zadd(config.transaction_table, currentTimestamp, transObj)
+            .exec(function(error, result) {
+                if (!error) {
+                    if (errorTrans) {
+                        res.json({
+                            msg: msg,
+                            balance: currentBalance,
+                            status: errorMsg
+                        });
+                    } else {
+                        res.json({
+                            msg: config.transaction_msg + type + "ed!!",
+                            balance: currentBalance,
+                            status: config.success_msg
+                        });
+                    }
+
                 } else {
                     res.json({
-                        msg: config.transaction_msg + type + "ed!!",
-                        balance: currentBalance,
-                        status: config.success_msg
+                        status: config.success_msg,
+                        balance: JSON.parse(transObj).balance,
+                        error: config.transaction_log_error
                     });
                 }
-
-            } else {
-                res.json({
-                    status: config.success_msg,
-                    balance: JSON.parse(transObj).balance,
-                    error: config.transaction_log_error
-                });
-            }
-        });
+            });
     }
 
     router.get("/accounts/:mobile_number/transactions", function(req, res) {
@@ -314,9 +317,9 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                         var meta = {};
                         links.Self = responseSt.transaction.Links.Self;
                         meta.TotalPages = responseSt.transaction.Meta.TotalPages;
-                        meta.FirstAvailableDateTime = transactions[transactions.length-1].BookingDateTime;
-                        meta.LastAvailableDateTime = transactions[0].BookingDateTime;
-                        res.json({ transaction: transactions, Link:links, Meta:meta});
+                        meta.FirstAvailableDateTime = (transactions.length>0)?transactions[transactions.length - 1].BookingDateTime:"";
+                        meta.LastAvailableDateTime =  (transactions.length>0)?transactions[0].BookingDateTime:"";
+                        res.json({ transaction: transactions, Link: links, Meta: meta });
                     } else {
                         res.status(500).json({ error: config.transaction_fetch_error });
                     }
@@ -325,6 +328,25 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                 res.status(500).json({ error: config.customer_fetch_error });
             }
         })
+    });
+
+
+    router.get("/transactions", function(req, res) {
+        redisClient.zrevrange(config.transaction_table, 0, -1, function(err, result) {
+            if (result) {
+                var transactions = result.map(JSON.parse);
+                var links = {};
+                var meta = {};
+                links.Self = responseSt.transaction.Links.Self;
+                meta.TotalPages = responseSt.transaction.Meta.TotalPages;
+                meta.FirstAvailableDateTime = (transactions.length>0)?transactions[transactions.length - 1].BookingDateTime:"";
+                meta.LastAvailableDateTime =  (transactions.length>0)?transactions[0].BookingDateTime:"";
+                res.json({ transaction: transactions, Link: links, Meta: meta });
+            } else {
+                res.status(500).json({ error: config.transaction_fetch_error });
+            }
+        });
+
     });
 
     router.get("/accounts/:mobile_number/balances", function(req, res) {

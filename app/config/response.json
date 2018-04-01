@@ -1,0 +1,74 @@
+{
+  "transaction": {
+    "Links": {
+      "Self":
+        "https://api.alphabank.com/open-banking/v2.0/accounts/{account_id}/transactions/"
+    },
+    "Meta": {
+      "TotalPages": 1,
+      "FirstAvailableDateTime": "",
+      "LastAvailableDateTime": ""
+    }
+  },
+
+  "balance": {
+    "Data": {
+      "Balance": {
+        "AccountId": "",
+        "Amount": {
+          "Amount": "",
+          "Currency": "INR"
+        },
+        "CreditDebitIndicator": "",
+        "Type": "InterimAvailable",
+        "DateTime": "2017-04-05T10:43:07+00:00",
+        "CreditLine": {
+          "Included": true,
+          "Amount": {
+            "Amount": "",
+            "Currency": "INR"
+          },
+          "Type": "Pre-Agreed"
+        }
+      }
+    },
+    "Links": {
+      "Self":
+        "https://api.alphabank.com/open-banking/v2.0/accounts/{account_id}/balances/"
+    },
+    "Meta": {
+      "TotalPages": 1
+    }
+  },
+
+  "getAccount": {
+    "Data": {
+      "Account": [
+        {
+          "AccountId": "",
+          "Currency": "INR",
+          "AccountType": "Personal",
+          "AccountSubType": "SavingAccount",
+          "Nickname": "nickName",
+          "Account": {
+            "SchemeName": "SortCodeAccount",
+            "Identification": "",
+            "Name": "",
+            "SecondaryIdentification": "Aadhaar Number"
+          }
+        }
+      ]
+    },
+    "Links": {
+      "Self": "https://api.alphabank.com/open-banking/v2.0/accounts/22289"
+    },
+    "Meta": {
+      "TotalPages": 1,
+      "Balance":"",
+      "Kyc":"",
+      "Limit":"",
+      "Partner":"",
+      "Product":""
+    }
+  }
+}

@@ -32,19 +32,6 @@
   "customer_registration_error":"Failed to register new customer!!",
   "customer_fetch_error":"Customer is not registered at financial intitutions!!",
   "prod": {
-    "APP_NAME": {
-      "description": "Banking-productivity App",
-      "value": "Banking-Productivity"
-    },
-    "DIALOGFLOW_ACCESS_TOKEN": {
-      "description": "Client access token for Dialog Flow",
-      "value": "6507ea6aff5b4571a567b7e290d58bc9"
-    },
-    "DialogFlow_LANG": {
-      "description": "Dialog Flow Agnet Language",
-      "value": "en",
-      "required": false
-    },
     "redis": {
       "host": "ec2-35-154-27-57.ap-south-1.compute.amazonaws.com",
       "port": 6379,
@@ -52,20 +39,7 @@
     }
   },
   "dev": {
-    "APP_NAME": {
-      "description": "Banking-productivity App",
-      "value": "Banking-Productivity"
-    },
-    "DIALOGFLOW_ACCESS_TOKEN": {
-      "description": "Client access token for Dialog Flow",
-      "value": "d1da4d49b8194774a35606a0ace0c744"
-    },
-    "DialogFlow_LANG": {
-      "description": "Dialog Flow Agnet Language",
-      "value": "en",
-      "required": false
-    },
-    "redis": {
+       "redis": {
       "host": "ec2-35-154-27-57.ap-south-1.compute.amazonaws.com",
       "port": 6379,
       "socket_keepalive": true

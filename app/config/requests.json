@@ -1,0 +1,40 @@
+{
+    "Transaction": {
+        "AccountId": "",
+        "TransactionId": "",
+        "TransactionReference": "",
+        "Amount": {
+            "Amount": "",
+            "Currency": "INR"
+        },
+        "CreditDebitIndicator": "",
+        "Status": "Booked",
+        "BookingDateTime": "",
+        "ValueDateTime": "",
+        "TransactionInformation": "",
+        "BankTransactionCode": {
+            "Code": "",
+            "SubCode": ""
+        },
+        "ProprietaryBankTransactionCode": {
+            "Code": "",
+            "Issuer": ""
+        },
+        "Balance": {
+            "Amount": {
+                "Amount": "",
+                "Currency": "INR"
+            },
+            "CreditDebitIndicator": "",
+            "Type": "Financial Institute Transaction"
+        }
+    },
+    "Links": {
+        "Self": "https://api.alphabank.com/open-banking/v2.0/accounts/{account_id}/transactions/"
+    },
+    "Meta": {
+        "TotalPages": 1,
+        "FirstAvailableDateTime": "",
+        "LastAvailableDateTime": ""
+    }
+}

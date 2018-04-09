@@ -10,12 +10,12 @@ var notFoundError = require("../../errors/notFoundError.js");
 var utils = require("../../utils/utils.js");
 
 
-function REST_ROUTER(router, redisClient) {
+function REST_ROUTER(router, redisClient, client) {
     var self = this;
-    self.handleRoutes(router, redisClient);
+    self.handleRoutes(router, redisClient, client);
 }
 
-REST_ROUTER.prototype.handleRoutes = function (router, redisClient) {
+REST_ROUTER.prototype.handleRoutes = function (router, redisClient, client) {
     var multi = redisClient.multi();
     var self = this;
     router.get("/", function (req, res) {
@@ -90,6 +90,17 @@ REST_ROUTER.prototype.handleRoutes = function (router, redisClient) {
                     customerResponse.Meta.Partner = partnerId;
                     customerResponse.Meta.Product = productId;
                     res.json({ customer: customerResponse });
+                    const query = {
+                        text: 'INSERT INTO "STG_FINACLE_GAM"("CUST_ID", "ACCT_NAME", "PHONE_NUM", "CLR_BAL_AMT", "DR_BAL_LIM", "ACCT_CLASSIFICATION_FLG", "PRODUCT_GROUP", "SCHM_TYPE", "LAST_MODIFIED_DATE", "INSERT_UPDATE_FLAG") VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+                        values: [customerId, name, mobile, customerResponse.Meta.Balance, limit, KYC, productId, partnerId, new Date().getTime(), (existingCustomer) ? "UPDATE" : "INSERT"]
+                    }
+                    client.query(query, (err, res) => {
+                        if (err) {
+                            console.log("Error while updating customer details in Postgres!!")
+                        } else {
+                            console.log("Successfully updated customer details in Postgres!!")
+                        }
+                    })
                 }
 
             });
@@ -307,12 +318,24 @@ REST_ROUTER.prototype.handleRoutes = function (router, redisClient) {
                             status: errorMsg
                         });
                     } else {
+                        msg = config.transaction_msg + type + "ed!!";
                         res.json({
-                            msg: config.transaction_msg + type + "ed!!",
+                            msg: msg,
                             balance: currentBalance,
                             status: config.success_msg
                         });
                     }
+                    const query = {
+                        text: 'INSERT INTO "STG_FINACLE_HTD"("CUST_ID", "TRAN_DATE", "TRAN_AMT", "INSTRMNT_TYPE", "TRAN_TYPE", "TRAN_CRNCY_CODE", "TRAN_ID", "TRAN_RMKS") VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+                        values: [customerId, requestSt.Transaction.BookingDateTime, requestSt.Transaction.Amount.Amount, type, type, "INR", requestSt.Transaction.TransactionId, (errorTrans)?"Exceeds Limit":msg]
+                    }
+                    client.query(query, (err, res) => {
+                        if (err) {
+                            console.log("Error while updating transaction details in Postgres!!")
+                        } else {
+                            console.log("Successfully updated transaction details in Postgres!!")
+                        }
+                    })
 
                 } else {
                     res.json({

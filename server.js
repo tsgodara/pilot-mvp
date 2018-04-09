@@ -3,6 +3,7 @@ var redis = require("redis");
 var bodyParser = require("body-parser");
 var rest = require("./app/controllers/financialInstitute/fnInstituteCtrl.js");
 var config = require("./app/config/config");
+const { Pool, Client } = require('pg')
 
 var app = express();
 var env = config.env;
@@ -33,17 +34,24 @@ REST.prototype.connectToRedis = function(router) {
     var redisClient = redis.createClient(config[env].redis);
     redisClient.on("ready", function() {
         console.log("Redis is ready");
-        // redisClient.auth('password',function(err,reply) {
-        //   console.log(reply);
-        var rest_router = new rest(router, redisClient);
-        self.startServer();
-        //  });
+        self.connectToDB(router, redisClient);
     });
 
     redisClient.on("error", function(error) {
         console.log("Error in Redis", error);
         self.stop();
     });
+};
+
+REST.prototype.connectToDB = function(router, redisClient) {
+    var self = this;
+    var pool = new Pool(config[env].pgConfig)
+    pool.connect(function (err, client, done) {
+        var rest_router = new rest(router, redisClient, client);
+        self.startServer();
+        console.log('postgres is ready');
+    });
+
 };
 
 REST.prototype.configureExpress = function() {

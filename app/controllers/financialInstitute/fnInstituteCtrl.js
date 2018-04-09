@@ -56,14 +56,14 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     function updateUserDetails(req, res, partnerId, productId, customerId, KYC, existingCustomer, name, mobile) {
         var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
         if (existingCustomer) {
-            redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, kyc) {
+            redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, result) {
                 
                 if (err) {
                     res.status(500).json({ error: config.customer_kyc_fetch_error });
                 } else {
-                    KYC = (parseInt(kyc) >= parseInt(KYC)) ? kyc : KYC;
-                    KYC = kyc;
-                    var limit = (kyc == '0' || kyc == 0) ? 10000 : 100000;
+                    KYC = (parseInt(result) >= parseInt(KYC)) ? result : KYC;
+                    KYC = result;
+                    var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
                     multi
                     .hset(config.table, config.customerID_field + ":" + customerId, KYC)
                     .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)

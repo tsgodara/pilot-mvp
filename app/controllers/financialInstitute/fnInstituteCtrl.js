@@ -62,10 +62,10 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                     res.status(500).json({ error: config.customer_kyc_fetch_error });
                 } else {
                     KYC = kyc;
+                    var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
                 }
             })
         }
-        var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
         multi
             .hset(config.table, config.customerID_field + ":" + customerId, KYC)
             .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)

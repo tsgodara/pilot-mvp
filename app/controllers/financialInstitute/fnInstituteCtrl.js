@@ -63,44 +63,77 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                 } else {
                     KYC = (parseInt(result) >= parseInt(KYC)) ? result : KYC;
                     KYC = result;
-                    console.log("result", result);
-                    console.log("KYC", KYC);
+                    var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
+                    console.log("limit", limit);
+                    console.log("KYC1", KYC);
+                    multi
+                        .hset(config.table, config.customerID_field + ":" + customerId, KYC)
+                        .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)
+                        .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerName_field, name)
+                        .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
+                        .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
+                        .exec(function(error, response) {
+                            if (error) {
+                                res.status(500).json({
+                                    "error": config.customer_update_error,
+                                    "partner_id": partnerId,
+                                    "product_id": productId,
+                                    "customer_id": customerId
+            
+                                });
+                            } else {
+                                var balanceObj = ((response[4] == null) ? "" : JSON.parse(response[4]));
+                                var customerResponse = responseSt.getAccount;
+                                customerResponse.Data.Account[0].AccountId = customerId;
+                                customerResponse.Data.Account[0].Account.Identification = mobile;
+                                customerResponse.Data.Account[0].Account.Name = name;
+                                customerResponse.Meta.Balance = ((balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount);
+                                customerResponse.Meta.Kyc = KYC;
+                                customerResponse.Meta.Limit = limit;
+                                customerResponse.Meta.Partner = partnerId;
+                                customerResponse.Meta.Product = productId;
+                                res.json({ customer: customerResponse });
+                            }
+            
+                        });
                 }
             })
+        } else {
+            var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
+            console.log("limit", limit);
+            console.log("KYC1", KYC);
+            multi
+                .hset(config.table, config.customerID_field + ":" + customerId, KYC)
+                .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)
+                .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerName_field, name)
+                .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
+                .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
+                .exec(function(error, response) {
+                    if (error) {
+                        res.status(500).json({
+                            "error": config.customer_update_error,
+                            "partner_id": partnerId,
+                            "product_id": productId,
+                            "customer_id": customerId
+    
+                        });
+                    } else {
+                        var balanceObj = ((response[4] == null) ? "" : JSON.parse(response[4]));
+                        var customerResponse = responseSt.getAccount;
+                        customerResponse.Data.Account[0].AccountId = customerId;
+                        customerResponse.Data.Account[0].Account.Identification = mobile;
+                        customerResponse.Data.Account[0].Account.Name = name;
+                        customerResponse.Meta.Balance = ((balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount);
+                        customerResponse.Meta.Kyc = KYC;
+                        customerResponse.Meta.Limit = limit;
+                        customerResponse.Meta.Partner = partnerId;
+                        customerResponse.Meta.Product = productId;
+                        res.json({ customer: customerResponse });
+                    }
+    
+                });
         }
-        var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
-        console.log("limit", limit);
-        console.log("KYC1", KYC);
-        multi
-            .hset(config.table, config.customerID_field + ":" + customerId, KYC)
-            .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)
-            .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerName_field, name)
-            .hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerLimit_field, limit)
-            .hget(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field)
-            .exec(function(error, response) {
-                if (error) {
-                    res.status(500).json({
-                        "error": config.customer_update_error,
-                        "partner_id": partnerId,
-                        "product_id": productId,
-                        "customer_id": customerId
-
-                    });
-                } else {
-                    var balanceObj = ((response[4] == null) ? "" : JSON.parse(response[4]));
-                    var customerResponse = responseSt.getAccount;
-                    customerResponse.Data.Account[0].AccountId = customerId;
-                    customerResponse.Data.Account[0].Account.Identification = mobile;
-                    customerResponse.Data.Account[0].Account.Name = name;
-                    customerResponse.Meta.Balance = ((balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount);
-                    customerResponse.Meta.Kyc = KYC;
-                    customerResponse.Meta.Limit = limit;
-                    customerResponse.Meta.Partner = partnerId;
-                    customerResponse.Meta.Product = productId;
-                    res.json({ customer: customerResponse });
-                }
-
-            });
+       
     }
 
 

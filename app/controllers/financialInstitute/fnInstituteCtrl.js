@@ -56,7 +56,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
     function updateUserDetails(req, res, partnerId, productId, customerId, KYC, existingCustomer, name, mobile) {
         var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
         if (existingCustomer) {
-            redisClient.hget(config.table, config.customerID_field + ":" + reply, function(err, kyc) {
+            redisClient.hget(config.table, config.customerID_field + ":" + customerId, function(err, kyc) {
                 
                 if (err) {
                     res.status(500).json({ error: config.customer_kyc_fetch_error });

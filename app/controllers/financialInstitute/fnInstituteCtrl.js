@@ -64,10 +64,13 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                     KYC = (parseInt(result) >= parseInt(KYC)) ? result : KYC;
                     KYC = result;
                     console.log("result", result);
+                    console.log("KYC", KYC);
                 }
             })
         }
         var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
+        console.log("limit", limit);
+        console.log("KYC1", KYC);
         multi
             .hset(config.table, config.customerID_field + ":" + customerId, KYC)
             .hset(partnerKey, config.customerID_field + ":" + customerId, KYC)

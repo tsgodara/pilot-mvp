@@ -21,6 +21,10 @@
   "error_msg": "ERROR",
   "success_msg":"SUCCESS",
   "failure_msg":"FAILURE",
+  "audit_successful_msg":"Executed",
+  "audit_failure_msg":"Trans_Error",
+  "audit_insufficient_msg":"Insufficient Balance",
+  "audit_limit_error_msg":"Exceeds limit",
   "exceed_limit": "Amount to be credited exceeds current customer limit!! ",
   "not_enough_amount": "Not enough amount to perform transaction!!",
   "transaction_msg": "Amount successfully ",
@@ -33,16 +37,17 @@
   "customer_update_error":"Failed to update customer details: KYC, Limit, etc.",
   "customer_registration_error":"Failed to register new customer!!",
   "customer_fetch_error":"Customer is not registered at financial intitutions!!",
+  "customer_kyc_fetch_error":"Failed to fetch customer's KYC details!!",
   "prod": {
     "redis": {
-      "host": "ec2-35-154-27-57.ap-south-1.compute.amazonaws.com",
+      "host": "ec2-13-126-226-8.ap-south-1.compute.amazonaws.com",
       "port": 6379,
       "socket_keepalive": true
     }
   },
   "dev": {
        "redis": {
-      "host": "ec2-35-154-27-57.ap-south-1.compute.amazonaws.com",
+      "host": "ec2-13-126-226-8.ap-south-1.compute.amazonaws.com",
       "port": 6379,
       "socket_keepalive": true
     }

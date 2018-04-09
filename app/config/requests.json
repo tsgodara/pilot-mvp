@@ -9,6 +9,7 @@
         },
         "CreditDebitIndicator": "",
         "Status": "Booked",
+        "Audit_Status": "",
         "BookingDateTime": "",
         "ValueDateTime": "",
         "TransactionInformation": "",

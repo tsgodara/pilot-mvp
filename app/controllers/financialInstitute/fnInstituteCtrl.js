@@ -55,6 +55,16 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
 
     function updateUserDetails(req, res, partnerId, productId, customerId, KYC, existingCustomer, name, mobile) {
         var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
+        if (existingCustomer) {
+            redisClient.hget(config.table, config.customerID_field + ":" + reply, function(err, kyc) {
+                
+                if (err) {
+                    res.status(500).json({ error: config.customer_kyc_fetch_error });
+                } else {
+                    KYC = kyc;
+                }
+            })
+        }
         var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
         multi
             .hset(config.table, config.customerID_field + ":" + customerId, KYC)
@@ -100,21 +110,29 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
         }
         redisClient.hget(config.table, config.customerMobile_field + ":" + mobile, function(err, reply) {
             if (reply) {
-                multi
-                    .hset(config.table, config.customerID_field + ":" + reply, KYC)
-                    .hset(config.table, config.customerID_field + ":" + reply + ":" + config.customerLimit_field, limit)
-                    .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field)
-                    .exec(function(error, result) {
-                        if (error) {
-                            res.status(500).json({ error: config.error_update_limit });
-                        } else {
-                            var balanceObj = ((result[2] == null) ? "" : JSON.parse(result[2]));
-                            res.json({
-                                "balance": (balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount,
-                                "limit": limit
-                            });
-                        }
-                    });
+                redisClient.hget(config.table, config.customerID_field + ":" + reply, function(err, kyc) {
+                    if (err) {
+                        res.status(500).json({ error: config.customer_kyc_fetch_error });
+                    } else {
+                        KYC = kyc;
+                    }
+                    multi
+                        .hset(config.table, config.customerID_field + ":" + reply, KYC)
+                        .hset(config.table, config.customerID_field + ":" + reply + ":" + config.customerLimit_field, limit)
+                        .hget(config.table, config.customerID_field + ":" + reply + ":" + config.customerBalance_field)
+                        .exec(function(error, result) {
+                            if (error) {
+                                res.status(500).json({ error: config.error_update_limit });
+                            } else {
+                                var balanceObj = ((result[2] == null) ? "" : JSON.parse(result[2]));
+                                res.json({
+                                    "balance": (balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount,
+                                    "limit": limit,
+                                    "KYC": KYC
+                                });
+                            }
+                        });
+                })
             } else {
                 res.status(500).json({ error: config.customer_fetch_error });
             }
@@ -213,6 +231,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                     var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                                     var balance = ((balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount);
                                     if ((result[0] == null) || (parseInt(balance) + parseInt(amount)) > parseInt(result[0])) {
+                                        requestSt.Transaction.Audit_Status = config.audit_limit_error_msg;
                                         requestSt.Transaction.Status = "Rejected";
                                         requestSt.Transaction.Balance.Amount.Amount = balance;
                                         var transaction = JSON.stringify(requestSt.Transaction);
@@ -223,11 +242,13 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         var transaction = JSON.stringify(requestSt.Transaction);
                                         redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transaction, function(err, response) {
                                             if (!err) {
+                                                requestSt.Transaction.Audit_Status = config.audit_successful_msg;
                                                 requestSt.Transaction.Status = "Booked";
                                                 requestSt.Transaction.Balance.Amount.Amount = currentBalance;
                                                 var transaction = JSON.stringify(requestSt.Transaction);
                                                 updateTransactionLog(req, res, customerId, transaction, type, currentBalance, false, "", "");
                                             } else {
+                                                requestSt.Transaction.Audit_Status = config.audit_failure_msg;
                                                 requestSt.Transaction.Status = "Failed";
                                                 requestSt.Transaction.Balance.Amount.Amount = balance;
                                                 var transaction = JSON.stringify(requestSt.Transaction);
@@ -239,6 +260,7 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                     var balanceObj = ((result[1] == null) ? "" : JSON.parse(result[1]));
                                     var balance = ((balanceObj == "") ? 0 : balanceObj.Balance.Amount.Amount);
                                     if ((result[0] == null) || (parseInt(amount) > parseInt(balance))) {
+                                        requestSt.Transaction.Audit_Status = config.audit_insufficient_msg;
                                         requestSt.Transaction.Status = "Rejected";
                                         requestSt.Transaction.Balance.Amount.Amount = balance;
                                         var transaction = JSON.stringify(requestSt.Transaction);
@@ -249,11 +271,13 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                                         var transaction = JSON.stringify(requestSt.Transaction);
                                         redisClient.hset(config.table, config.customerID_field + ":" + customerId + ":" + config.customerBalance_field, transaction, function(err, response) {
                                             if (!err) {
+                                                requestSt.Transaction.Audit_Status = config.audit_successful_msg;
                                                 requestSt.Transaction.Status = "Booked";
                                                 requestSt.Transaction.Balance.Amount.Amount = currentBalance;
                                                 var transaction = JSON.stringify(requestSt.Transaction);
                                                 updateTransactionLog(req, res, customerId, transaction, type, currentBalance, false, "", "")
                                             } else {
+                                                requestSt.Transaction.Audit_Status = config.audit_failure_msg;
                                                 requestSt.Transaction.Status = "Failed";
                                                 requestSt.Transaction.Balance.Amount.Amount = balance;
                                                 var transaction = JSON.stringify(requestSt.Transaction);
@@ -317,8 +341,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                         var meta = {};
                         links.Self = responseSt.transaction.Links.Self;
                         meta.TotalPages = responseSt.transaction.Meta.TotalPages;
-                        meta.FirstAvailableDateTime = (transactions.length>0)?transactions[transactions.length - 1].BookingDateTime:"";
-                        meta.LastAvailableDateTime =  (transactions.length>0)?transactions[0].BookingDateTime:"";
+                        meta.FirstAvailableDateTime = (transactions.length > 0) ? transactions[transactions.length - 1].BookingDateTime : "";
+                        meta.LastAvailableDateTime = (transactions.length > 0) ? transactions[0].BookingDateTime : "";
                         res.json({ transaction: transactions, Link: links, Meta: meta });
                     } else {
                         res.status(500).json({ error: config.transaction_fetch_error });
@@ -339,8 +363,8 @@ REST_ROUTER.prototype.handleRoutes = function(router, redisClient) {
                 var meta = {};
                 links.Self = responseSt.transaction.Links.Self;
                 meta.TotalPages = responseSt.transaction.Meta.TotalPages;
-                meta.FirstAvailableDateTime = (transactions.length>0)?transactions[transactions.length - 1].BookingDateTime:"";
-                meta.LastAvailableDateTime =  (transactions.length>0)?transactions[0].BookingDateTime:"";
+                meta.FirstAvailableDateTime = (transactions.length > 0) ? transactions[transactions.length - 1].BookingDateTime : "";
+                meta.LastAvailableDateTime = (transactions.length > 0) ? transactions[0].BookingDateTime : "";
                 res.json({ transaction: transactions, Link: links, Meta: meta });
             } else {
                 res.status(500).json({ error: config.transaction_fetch_error });

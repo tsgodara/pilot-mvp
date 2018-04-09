@@ -1,7 +1,7 @@
 {
-  "name": "banking-productivity",
+  "name": "pilot-mvp",
   "version": "1.0.0",
-  "description": "dialogflow bank Bot allows customer to open an account, check balance, etc.",
+  "description": "",
   "main": "server.js",
   "dependencies": {
     "apiai": "^4.0.3",
@@ -28,8 +28,7 @@
   },
   "keywords": [
     "bank",
-    "pwa",
-    "bot",
+    "limit",
     "account"
   ],
   "author": "Tapendra S Godara",

@@ -53,6 +53,7 @@ REST_ROUTER.prototype.handleRoutes = function (router, redisClient, client) {
                     if (err) {
                         res.status(500).json({ error: config.customer_kyc_fetch_error });
                     } else {
+                        console.log("result", result);
                         updateUserDetails(req, res, partnerId, productId, reply, result, true, name, mobile);
                     }
                 })
@@ -61,6 +62,7 @@ REST_ROUTER.prototype.handleRoutes = function (router, redisClient, client) {
     });
 
     function updateUserDetails(req, res, partnerId, productId, customerId, KYC, existingCustomer, name, mobile) {
+        console.log("resultKYC", KYC);
         var partnerKey = config.partner_field + ":" + partnerId + ":" + config.product_field + ":" + productId;
         var limit = (KYC == '0' || KYC == 0) ? 10000 : 100000;
         multi

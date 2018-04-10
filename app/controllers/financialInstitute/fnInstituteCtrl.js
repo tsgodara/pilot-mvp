@@ -54,7 +54,8 @@ REST_ROUTER.prototype.handleRoutes = function (router, redisClient, client) {
                         res.status(500).json({ error: config.customer_kyc_fetch_error });
                     } else {
                         console.log("result", result);
-                        updateUserDetails(req, res, partnerId, productId, reply, result, true, name, mobile);
+                        KYC = (parseInt(result) >= parseInt(KYC) ? result : KYC);
+                        updateUserDetails(req, res, partnerId, productId, reply, KYC, true, name, mobile);
                     }
                 })
             }

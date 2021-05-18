@@ -75,4 +75,4 @@ REST.prototype.stop = function() {
     process.exit(1);
 };
 
-new REST();
+new REST(); 
